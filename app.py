@@ -10,7 +10,18 @@ from database import *
 from models import *
 from bot import start_bot
 
-app = FastAPI()
+app = FastAPI(title='EORA Test Assignment')
+
+tags_metadata = [
+    {
+        'name': 'Authentication',
+        'description': 'Routes for registering and authorizing users.'
+    },
+    {
+        'name': 'Bots Interaction',
+        'description': 'Routes to interact with bots routes'
+    }
+]
 
 config = RawConfigParser()
 config.read('config.ini')
@@ -60,7 +71,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     return User(**user_dict)
 
 
-@app.post('/login/')
+@app.post('/login/', tags=['Authentication'])
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user_dict = get_user(form_data.username)
 
@@ -77,8 +88,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
-@app.post('/register/')
-def register(user: User):
+@app.post('/register/', tags=['Authentication'])
+def register(user: UserRegister):
     user.password = hash_password(user.password)
 
     add_user(user.dict())
@@ -88,12 +99,7 @@ def register(user: User):
     return {'access_token': access_token, 'token_type': 'bearer'}
 
 
-@app.get('/items/')
-def read_items(current_user: str = Depends(get_current_user)):
-    return {'data': 'test', 'owner': current_user.username}
-
-
-@app.post('/bot/')
+@app.post('/bot/', tags=['Bots Interaction'])
 def new_bot(token: str, current_user: str = Depends(get_current_user)):
     if check_max_bots(current_user.username):
         raise HTTPException(status_code=403, detail='bots_limit_reached')
@@ -106,7 +112,7 @@ def new_bot(token: str, current_user: str = Depends(get_current_user)):
 
 
 
-@app.delete('/bot/{bot_id}/')
+@app.delete('/bot/{bot_id}/', tags=['Bots Interaction'])
 def delete_bot(bot_id: int, current_user: str = Depends(get_current_user)):
     if not user_has_bot(current_user.username, bot_id):
         raise HTTPException(status_code=400, detail='invalid_id')
@@ -116,15 +122,6 @@ def delete_bot(bot_id: int, current_user: str = Depends(get_current_user)):
     return {'status': 'ok'}
 
 
-@app.get('/bots/')
+@app.get('/bots/', tags=['Bots Interaction'])
 def get_bots(current_user: str = Depends(get_current_user)):
     return load_bots(current_user.username)
-
-
-@app.post('/message')
-def send_message(bot_id: int, chat_id: int, message: str, current_user: str = Depends(get_current_user)):
-    if not user_has_bot(current_user.username, bot_id):
-        raise HTTPException(status_code=400, detail='invalid_id')
-
-    token = get_bot_token(bot_id)
-
