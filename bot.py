@@ -1,3 +1,5 @@
+import os
+
 from telegram import Bot
 from telegram.ext import Updater, MessageHandler, Filters
 
@@ -23,11 +25,8 @@ def start_bot(token):
     updater.dispatcher.add_handler(MessageHandler(Filters.text, mirror_message))
 
     updater.start_polling()
+
     print('polling started')
-    return True
 
-
-
-
-if __name__ == "__main__":
-    print(get_bot_info('1535635184:AAFLygDNnN3q-YmRlf1iZEKAl7SgZb_27SA'))
+    return updater
+    

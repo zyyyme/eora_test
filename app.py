@@ -1,16 +1,19 @@
-from configparser import RawConfigParser
+import os
 from datetime import datetime, timedelta
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from telegram.error import InvalidToken
 
 from database import *
 from models import *
 from bot import start_bot
 
 app = FastAPI(title='EORA Test Assignment')
+
+ACTIVE_BOTS = {}
 
 tags_metadata = [
     {
@@ -23,12 +26,9 @@ tags_metadata = [
     }
 ]
 
-config = RawConfigParser()
-config.read('config.ini')
-
-SECRET_KEY = config.get('AUTH', 'SECRET_KEY')
-TOKEN_EXPIRATION = int(config.get('AUTH', 'ACCESS_TOKEN_EXPIRE_MINUTES'))
-ALGORITHM = config.get('AUTH', 'ALGORITHM')
+SECRET_KEY = os.environ.get('SECRET_KEY', '45a2c62837898dc6d13cafa11521b67befef713456b8868cdb3410e0475e35ef')
+TOKEN_EXPIRATION = int(os.environ.get('ACCESS_TOKEN_EXPIRE_MINUTES', 15))
+ALGORITHM = os.environ.get('ALGORITHM', 'HS256')
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -68,7 +68,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     if not user_dict:
         raise credentials_exception
 
-    return User(**user_dict)
+    return UserInDB(**user_dict)
 
 
 @app.post('/login/', tags=['Authentication'])
@@ -78,7 +78,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if not user_dict:
         raise HTTPException(status_code=400, detail='wrong_user_password')
 
-    user = User(**user_dict)
+    user = UserInDB(**user_dict)
 
     if not verify_password(form_data.password, user.password):
         raise HTTPException(status_code=400, detail='wrong_user_password')
@@ -89,10 +89,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.post('/register/', tags=['Authentication'])
-def register(user: UserRegister):
+def register(user: User):
     user.password = hash_password(user.password)
 
-    add_user(user.dict())
+    if add_user(user.dict()) is None:
+        raise HTTPException(status_code=400, detail='user_exists')
 
     access_token = generate_token(data={'user': user.username})
 
@@ -101,12 +102,16 @@ def register(user: UserRegister):
 
 @app.post('/bot/', tags=['Bots Interaction'])
 def new_bot(token: str, current_user: str = Depends(get_current_user)):
-    if check_max_bots(current_user.username):
+
+    if current_user.bots_limit():
         raise HTTPException(status_code=403, detail='bots_limit_reached')
 
-    add_bot(current_user.username, token)
+    try:
+        updater = start_bot(token)
+    except InvalidToken:
+        raise HTTPException(status_code=400, detail='invalid_token')
 
-    start_bot(token)
+    bot_id = add_bot(current_user.username, token)
 
     return {'status': 'ok'}
 
@@ -114,14 +119,14 @@ def new_bot(token: str, current_user: str = Depends(get_current_user)):
 
 @app.delete('/bot/{bot_id}/', tags=['Bots Interaction'])
 def delete_bot(bot_id: int, current_user: str = Depends(get_current_user)):
-    if not user_has_bot(current_user.username, bot_id):
+    if not current_user.has_bot(bot_id):
         raise HTTPException(status_code=400, detail='invalid_id')
 
     result = remove_bot(current_user.username, bot_id)
-    
+
     return {'status': 'ok'}
 
 
 @app.get('/bots/', tags=['Bots Interaction'])
 def get_bots(current_user: str = Depends(get_current_user)):
-    return load_bots(current_user.username)
+    return {'bots': load_bots(current_user.username)}
