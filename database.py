@@ -128,7 +128,7 @@ def get_bots():
 
     bots = []
 
-    bots_in_db = db.users.find({}, {'bots': true})
+    bots_in_db = db.users.find({}, {'bots': True})
 
     for el in bots_in_db:
         bots.extend(el)
