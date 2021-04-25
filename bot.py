@@ -1,7 +1,8 @@
 import os
 
 from telegram import Bot
-from telegram.ext import Updater, MessageHandler, Filters
+from telegram.ext import Filters, MessageHandler, Updater
+
 
 def get_bot_info(token):
     bot = Bot(token=token)
@@ -25,8 +26,6 @@ def start_bot(token):
     updater.dispatcher.add_handler(MessageHandler(Filters.text, mirror_message))
 
     updater.start_polling()
-
-    print('polling started')
 
     return updater
     

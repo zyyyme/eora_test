@@ -4,6 +4,7 @@ from pymongo import MongoClient
 
 from bot import get_bot_info
 
+
 def make_connection():
     """Utility function to connect to database.
 
@@ -84,8 +85,6 @@ def load_bots(user):
     db = make_connection()
 
     bot_ids = db.users.find_one({'username': user})['bots']
-
-    print(bot_ids)
 
     bots = []
 

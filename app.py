@@ -2,14 +2,14 @@ import os
 from datetime import datetime, timedelta
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from telegram.error import InvalidToken
 
+from bot import start_bot
 from database import *
 from models import *
-from bot import start_bot
 
 app = FastAPI(title='EORA Test Assignment')
 
