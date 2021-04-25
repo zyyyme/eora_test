@@ -1,7 +1,7 @@
 from bot import start_bot
-from database import get_bots
+from database import get_bots_tokens
 
-bots = get_bots()
+bots_tokens = get_bots()
 
-for bot in bots:
-    start_bot(bot['token'])
+for token in bots_tokens:
+    start_bot(token)

@@ -118,7 +118,7 @@ def remove_bot(username, bot_id):
     return None
 
 
-def get_bots():
+def get_bots_tokens():
     """Supplementary function for startup to get all bots.
 
     Returns:
@@ -126,11 +126,11 @@ def get_bots():
     """
     db = make_connection()
 
-    bots = []
+    bots_tokens = []
 
-    bots_in_db = db.users.find({}, {'bots': True})
+    bots_in_db = db.bots.find({}, {'token': True})
 
     for el in bots_in_db:
-        bots.extend(el)
+        bots_tokens.append(el['token'])
 
-    return bots
+    return bots_tokens
